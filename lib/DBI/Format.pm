@@ -1,4 +1,5 @@
 # -*- perl -*-
+# vim:ts=2:sw=2:aw:ai:sta:nows
 #
 #   DBI::Format - a package for displaying result tables
 #
@@ -24,7 +25,7 @@ package DBI::Format;
 use Text::Abbrev;
 use vars qw($VERSION);
 
-$VERSION = sprintf( "%d.%02d", q$Revision: 11.91 $ =~ /(\d+)\.(\d+)/ );
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.92 $ =~ /(\d+)\.(\d+)/ );
 
 
 sub available_formatters {
@@ -125,16 +126,18 @@ sub trailer {
 }
 
 sub _determine_width {
-    my($self , $type, $precision) = @_;
+	my($self , $type, $precision) = @_;
+
 	my $width = 
-		($type == SQL_DATE)? 8 :
-		($type == SQL_INTEGER 
-			and defined $precision
-			and $precision > 15 ) ? 10 :
-		($type == SQL_NUMERIC 
-			and defined $precision
-			and $precision > 15 ) ? 10 :
-			defined($precision) ?  $precision: 0;
+		(!defined($type)) ? 0 :		# Is type defined?
+		($type == SQL_DATE)	? 8 :		# Is type a Date?
+			($type == SQL_INTEGER 		# Is type an Integer?
+				and defined $precision
+				and $precision > 15 ) ? 10 :
+				($type == SQL_NUMERIC 	# Is type a Numeric?
+					and defined $precision
+					and $precision > 15 ) ? 10 :
+						defined($precision) ?  $precision: 0; # Default 0
 
 	return $width;
 }

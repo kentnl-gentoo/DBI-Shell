@@ -27,6 +27,9 @@ testtiming.sql	Simple select statement for testing timing module.
 # $Rev$
 #
 # $Log: MANIFEST,v $
+# Revision 11.92  2003/09/22 18:37:39  tlowery
+# Changes including fix for eol_csv
+#
 # Revision 11.91  2002/12/13 23:44:56  tlowery
 # Fixed version numbers
 #
@@ -69,3 +72,4 @@ testtiming.sql	Simple select statement for testing timing module.
 # Added CVS tags.
 #
 #
+META.yml                                Module meta-data (added by MakeMaker)

@@ -41,7 +41,7 @@ use Carp;
 @ISA = qw(Exporter DBI::Shell::Std);
 @EXPORT = qw(shell);
 
-$VERSION = sprintf( "%d.%02d", q$Revision: 11.91 $ =~ /(\d+)\.(\d+)/ );
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.93 $ =~ /(\d+)\.(\d+)/ );
 
 my $warning = <<'EOM';
 
@@ -273,6 +273,10 @@ sub default_config {
 	 [ 'tmp_dir|tmp_d=s'	=> $ENV{DBISH_TMP} ],
 	 [ 'tmp_file|tmp_f=s'	=> qq{dbish$$.sql} ],
 	 [ 'home_dir|home_d=s'	=> $ENV{HOME} || "$ENV{HOMEDRIVE}$ENV{HOMEPATH}" ],
+	 [ 'desc_show_remarks|show_remarks' => 1 ],
+	 [ 'desc_show_long|show_long' => 1 ],
+	 [ 'desc_format=s'		=> q{partbox} ],
+	 [ 'desc_show_columns=s' => q{COLUMN_NAME,DATA_TYPE,TYPE_NAME,COLUMN_SIZE,PK,NULLABLE,COLUMN_DEF,IS_NULLABLE,REMARKS} ],
 	 @_,
     ) {
 	$sh->add_option(@$opt_ref);
@@ -555,15 +559,31 @@ sub run {
 	$current_line = $sh->readline($sh->prompt());
 	$current_line = "/quit" unless defined $current_line;
 
+	my $copy_cline = $current_line; my $eat_line = 0;
+	# move past command prefix contained within quotes
+	while( $copy_cline =~ s/(['"][^'"]*(?:$prefix).*?['"])//og ) {
+		$eat_line = $+[0];
+	}
+
+	# What's left to check?
+	my $line;
+	if ($eat_line > 0) {
+	    $sh->{current_buffer} .= substr( $current_line, 0, $eat_line ) . "\n";
+		$current_line = substr( $current_line, $eat_line )
+			if (length($current_line) >= $eat_line );
+	} else {
+		$current_line = $copy_cline;
+	}
+
+
 	if ( 
 		$current_line =~ m/
 			^(.*?)
 			(?<!\\)
 			$prefix
-			(?<=[^'"])
 			(?:(\w*)
 			([^\|><]*))?
-			((?:\||>>?).+)?
+			((?:\||>>?|<<?).+)?
 			$
 	/x) {
 	    my ($stmt, $cmd, $args_string, $output) = ($1, $2, $3, $4||''); 
@@ -882,6 +902,10 @@ sub do_go {
     $sh->push_chistory;
     
     eval {
+		# Determine if the single quotes are out of balance.
+		my $count = ($sh->{current_buffer} =~ tr/'/'/);
+		warn "Quotes out of balance: $count" unless (($count % 2) == 0);
+
 		my $sth = $sh->{dbh}->prepare($sh->{current_buffer});
 
 		$sh->sth_go($sth, 1);
@@ -1039,6 +1063,11 @@ sub do_connect {
     return unless $dsn;
 
     $sh->do_disconnect if $sh->{dbh};
+
+	# Change from Jeff Zucker, convert literal slash and letter n to newline.
+	$dsn =~ s/\\n/\n/g;
+	$dsn =~ s/\\t/\t/g;
+
 
     $sh->{data_source} = $dsn;
     if (defined $user and length $user) {
@@ -1343,46 +1372,114 @@ sub do_describe {
 #	SQL_DATETIME_SUB,CHAR_OCTET_LENGTH,ORDINAL_POSITION,
 #	IS_NULLABLE
 #
-	push my @desc_cols, qw/TABLE_CAT TABLE_SCHEM TABLE_NAME COLUMN_NAME 
-		DATA_TYPE TYPE_NAME COLUMN_SIZE 
-		DECIMAL_DIGITS NUM_PREC_RADIX NULLABLE 
-		COLUMN_DEF SQL_DATA_TYPE IS_NULLABLE REMARKS/;
+# desc_format: partbox
+# desc_show_long: 1
+# desc_show_remarks: 1
 
-    my $sth = $dbh->column_info(undef, undef, $tab);
+	my @names = ();
+
+	# Determine if the short or long display type is used
+	if (exists $sh->{desc_show_long} and $sh->{desc_show_long} == 1) {
+
+		if (exists $sh->{desc_show_columns} and defined
+			$sh->{desc_show_columns}) {
+			@names = map { defined $_ ? uc $_ : () } split( /[,\s+]/,  $sh->{desc_show_columns});
+			unless (@names) { # List of columns is empty
+				$sh->err ( qq{option desc_show_columns contains an empty list, using default} );
+				# set the empty list to undef
+				$sh->{desc_show_columns} = undef;
+				@names = ();
+				push @names, qw/COLUMN_NAME DATA_TYPE TYPE_NAME COLUMN_SIZE PK
+					NULLABLE COLUMN_DEF IS_NULLABLE/;
+			}
+		} else {
+			push @names, qw/COLUMN_NAME DATA_TYPE TYPE_NAME COLUMN_SIZE PK
+				NULLABLE COLUMN_DEF IS_NULLABLE/;
+		}
+	} else {
+		push @names, qw/COLUMN_NAME TYPE_NAME NULLABLE PK/;
+	}
+
+	# my @names = qw/COLUMN_NAME DATA_TYPE NULLABLE PK/;
+	push @names, q{REMARKS}
+		if (exists $sh->{desc_show_remarks}
+			and $sh->{desc_show_remarks} == 1
+			and (not grep { m/REMARK/i } @names));
+
+	my $sth = $dbh->column_info(undef, undef, $tab);
 
     if (ref $sth) {
+		
+		# Only attempt the primary_key lookup if using the column_info call.
+
+		my @key_column_names = $dbh->primary_key( undef, undef, $tab );
+		my %pk_cols;
+		# Convert the column names to lower case for matching
+		foreach my $idx (0 ..$#key_column_names) {
+			$pk_cols{lc($key_column_names[$idx])} = $idx;
+		}
 
 		my @t_data = ();  # An array of arrays
 			
 		while (my $row = $sth->fetchrow_hashref() ) {
 
-			push my @out_row, map { $row->{$_} } qw/COLUMN_NAME/;
+			my $col_name	= $row->{COLUMN_NAME};
+			my $col_name_lc	= lc $col_name;
 
-			my $type = $row->{DATA_TYPE};
+			# Use the Type name, unless undefined, they use the data type
+			# value.  TODO: Change to resolve the data_type to an ANSI data
+			# type ... SQL_
+			my $type = $row->{TYPE_NAME} || $row->{DATA_TYPE};
 
 			if (defined $row->{COLUMN_SIZE}) {
 				$type .= "(" . $row->{COLUMN_SIZE} . ")";
 			}
+			my $is_pk = $pk_cols{$col_name_lc} if exists $pk_cols{$col_name_lc};
 
-			push(@out_row
-				, $type
-				, $row->{NULLABLE} eq 1 ? q{    N}: q{}
-				, q()
-				, $row->{REMARKS} || q{}
-				);
+			my @out_row;
+			foreach my $dcol (@names) {
+
+				# Add primary key
+				if ($dcol eq q{PK}) {
+					push @out_row, defined $is_pk  ? $is_pk : q{};
+					next;
+				}
+				if ($dcol eq q{TYPE_NAME} and
+					(exists $sh->{desc_show_long} and $sh->{desc_show_long} == 0)) {
+						my $type = $row->{TYPE_NAME} || $row->{DATA_TYPE};
+						if (defined $row->{COLUMN_SIZE}) {
+							$type .= "(" . $row->{COLUMN_SIZE} . ")";
+						}
+					push @out_row, $type;
+					next;
+				}
+
+				# Put a blank if not defined.
+				push @out_row, defined $row->{$dcol} ? $row->{$dcol} :  q{};
+
+				# push(my @out_row
+				# , $col_name
+				# , $type
+				# , sprintf( "%4s", ($row->{NULLABLE} eq 0 ? q{N}: q{Y}))
+				# );
+
+				# push @out_row, defined $row->{REMARKS} ? $row->{REMARKS} :  q{}
+				# 	if (exists $sh->{desc_show_remarks}
+				# 	and $sh->{desc_show_remarks} == 1);
+			}
 
 			push @t_data, \@out_row;
 		}
 
 		$sth->finish; # Complete the handler from column_info
 
-		my @names = qw/COLUMN_NAME DATA_TYPE NULLABLE PK REMARKS/;
-# Create a new statement handler from the data and names.
+
+		# Create a new statement handler from the data and names.
 		$sth = $sh->prepare_from_data("describe", \@t_data, \@names);
 
-# Use the built in formatter to handle data.
+		# Use the built in formatter to handle data.
 
-		my $mode = 'partbox';
+		my $mode = exists $sh->{desc_format} ? $sh->{desc_format} : 'partbox';
 		my $class = eval { DBI::Format->formatter($mode,1) };
 		unless ($class) {
 			return $sh->alert("Unable to select '$mode': $@");
@@ -1403,11 +1500,15 @@ sub do_describe {
 
 	}
 
+	#
+	# This is the old method, if the driver doesn't support the DBI column_info
+	# meta data.
+	#
 	my $sql = qq{select * from $tab where 1 = 0};
 	$sth = $dbh->prepare( $sql );
 	$sth->execute;
 	my $cnt = $#{$sth->{NAME}};  #
-    my @names = qw{NAME TYPE NULLABLE};
+    @names = qw{NAME TYPE NULLABLE};
 	my @ti;
 	for ( my $c = 0; $c <= $cnt; $c++ ) {
 		push( my @j, $sth->{NAME}->[$c] || 0 );
