@@ -52,6 +52,9 @@ print "Extracted $file from ",__FILE__," with variable substitutions.\n";
 # end
 #
 # $Log: dbish.PL,v $
+# Revision 11.91  2002/12/13 23:44:56  tlowery
+# Fixed version numbers
+#
 # Revision 11.6  2002/10/28 02:49:57  tlowery
 # Release 11.6
 #

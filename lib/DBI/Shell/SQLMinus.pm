@@ -15,7 +15,7 @@ use Carp;
 
 use vars qw(@ISA $show $set $VERSION);
 
-$VERSION = (qw$Revision: 11.9 $)[1];
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.91 $ =~ /(\d+)\.(\d+)/ );
 
 sub init {
     my ($class, $sh, @args) = @_;

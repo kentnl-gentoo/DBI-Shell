@@ -22,8 +22,9 @@ use strict;
 package DBI::Format;
 
 use Text::Abbrev;
+use vars qw($VERSION);
 
-$DBI::Format::VERSION = $DBI::Format::VERSION = (qw$Revision: 11.8 $)[1];
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.91 $ =~ /(\d+)\.(\d+)/ );
 
 
 sub available_formatters {

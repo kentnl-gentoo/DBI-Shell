@@ -5,7 +5,7 @@ use strict;
 use vars qw(@ISA $VERSION);
 use Carp;
 
-$VERSION = (qw$Revision: 11.6 $)[1];
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.91 $ =~ /(\d+)\.(\d+)/ );
 
 my ($loa, @matches, @tables, @table_list, $tbl_nm, $term, $history);
 

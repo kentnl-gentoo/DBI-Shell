@@ -7,7 +7,7 @@ use strict;
 use vars qw(@ISA $VERSION);
 use Benchmark qw(timeit timestr);
 
-$VERSION = (qw$Revision: 11.6 $)[1];
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.91 $ =~ /(\d+)\.(\d+)/ );
 
 sub init {
 	my ($self, $sh, @arg)  = @_;

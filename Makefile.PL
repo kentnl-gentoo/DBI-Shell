@@ -1,6 +1,6 @@
 # -*- perl -*-
 #
-# $Id: Makefile.PL,v 11.9 2002/12/07 14:26:34 tlowery Exp $
+# $Id: Makefile.PL,v 11.91 2002/12/13 23:44:56 tlowery Exp $
 #
 #  Copyright (c) 1994,1995,1996,1997  Tim Bunce  England
 #
@@ -55,7 +55,7 @@ $::opt_g &&= '-g';  # convert to actual string
 
 if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{ABSTRACT_FROM} = 'lib/DBI/Shell.pm';
-    $opts{AUTHOR} = 'Thomas A. Lowery (tl-dbish@stlowery.net), Tim Bunce (dbi-users@isc.org) and host of others.';
+    $opts{AUTHOR} = 'Thomas A. Lowery (tl-dbish@stlowery.net) and host of others.';
     $opts{CAPI} = 'TRUE' if $Config{archname} =~ /-object\b/i;
 }
 
@@ -65,6 +65,9 @@ WriteMakefile( %opts );
 # =====================================================================
 
 # $Log: Makefile.PL,v $
+# Revision 11.91  2002/12/13 23:44:56  tlowery
+# Fixed version numbers
+#
 # Revision 11.9  2002/12/07 14:26:34  tlowery
 # Added pre-req to Makefile.PL
 #

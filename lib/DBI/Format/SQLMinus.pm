@@ -25,9 +25,9 @@ use Text::Reform qw(form break_with);
 
 use Data::Dumper;
 
-$DBI::Format::SQLMinus::VERSION =
-	$DBI::Format::SQLMinus::VERSION =
-		(qw$Revision: 11.8 $)[1];
+use vars qw($VERSION);
+
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.91 $ =~ /(\d+)\.(\d+)/ );
 
 sub header {
     my($self, $sth, $fh, $sep) = @_;
@@ -64,12 +64,15 @@ sub header {
 	}
 
 	$self->{feedback}	= $set->{feedback};
-	$self->{recsep}		= $set->{recsep};
-	$self->{recsepchar}	= $set->{recsepchar};
-	$self->{null}       = $set->{null};
-
-	$self->{pagesize}	= $set->{pagesize};
 	$self->{limit}		= $set->{limit};
+	$self->{null}       = $set->{null};
+	$self->{pagesize}	= $set->{pagesize};
+	$self->{recsepchar}	= $set->{recsepchar};
+	$self->{recsep}		= $set->{recsep};
+
+	$self->{pagefeed}	= undef;
+	$self->{pagelen}	= 66;
+	$self->{pagenum}	= 0;
 
 	# $self->{breaks};
 
@@ -384,7 +387,10 @@ sub row {
 		print $fh "\n" x $skip_rows;
 	}
 
-    print $fh form ( { 'break' => break_with('') }, $format_rows, @data);
+    print $fh form ( 
+		{ 'break'	=> break_with('') }
+		, $format_rows, @data
+		);
 
 	++$self->{'rows'};
 
@@ -409,6 +415,7 @@ sub trailer {
 
 	delete $self->{recsep};
 	delete $self->{recsepchar};
+	print "Page Number: ", $self->{pagenum}, "\n";
 
     $self->SUPER::trailer(@_);
 } 

@@ -7,6 +7,10 @@ use File::Find ();
 use File::Basename;
 use File::Spec;
 
+use vars qw($VERSION);
+
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.91 $ =~ /(\d+)\.(\d+)/ );
+
 # Set the variable $File::Find::dont_use_nlink if you're using AFS,
 # since AFS cheats.
 
@@ -45,7 +49,8 @@ sub look_for_file {
 	$self->log("calling find with $to_find_file") if $self->{debug};
 
 
-	my @search_path = split(/:/,
+# Split the sqlpath, then determine if any of the directories are valid.
+	my @search_path = map { -d $_ ? $_ : () } split(/:/,
 		   defined $self->{sqlpath} ? $self->{sqlpath} : ()
 		   );
 		# ,  (exists $ENV{DBISH_SQL_PATH} ?  $ENV{DBISH_SQL_PATH} : ()) );

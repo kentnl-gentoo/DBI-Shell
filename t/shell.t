@@ -23,13 +23,12 @@ BEGIN {
 	}
 }
 
-use Test::More tests => 58;
+use Test::More tests => 51;
 
 BEGIN { use_ok( 'DBI::Shell' ); }
 
 my $LOAD_SQL=q{testsql.sql};
 my $SAVE_SQL=q{testsql.tmp};
-my $SPOOL_FILE=q{testspool.dat};
 
 my $sh = DBI::Shell->new(qw(dbi:ExampleP:));
 ok(defined $sh, "Create new handler");
@@ -111,22 +110,12 @@ ok( ! $sh->do_go, "Execute current buffer" );
 ok( $sh->do_get(-2), "Get with -2 command" );
 ok( ! $sh->do_go, "Execute current buffer" );
 
-unlink $SPOOL_FILE if -f $SPOOL_FILE;
-ok( $sh->do_spool( $SPOOL_FILE ), "Spooling $SPOOL_FILE" );
-ok( $sh->do_spool( ), "Spooling to $SPOOL_FILE" );
-ok( $sh->do_get(-1), "Get with -1 command" );
-ok( ! $sh->do_go, "Execute current buffer" );
-ok(  -f $SPOOL_FILE, "Created Spool file" );
-ok( $sh->do_spool( q{off} ), "Spool off" );
-ok( $sh->do_spool( ), "Spool is off" );
-
 ok( ! $sh->do_disconnect, "Disconnect" );
 
 $sh = undef;
 
 END { 
 	unlink $SAVE_SQL if -f $SAVE_SQL;
-	unlink $SPOOL_FILE if -f $SPOOL_FILE;
 	}
 
 __END__
