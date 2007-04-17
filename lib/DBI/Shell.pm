@@ -41,7 +41,7 @@ use Carp;
 @ISA = qw(Exporter DBI::Shell::Std);
 @EXPORT = qw(shell);
 
-$VERSION = sprintf( "%d.%02d", q$Revision: 11.93 $ =~ /(\d+)\.(\d+)/ );
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.94 $ =~ /(\d+)\.(\d+)/ );
 
 my $warning = <<'EOM';
 
@@ -1406,18 +1406,20 @@ sub do_describe {
 			and $sh->{desc_show_remarks} == 1
 			and (not grep { m/REMARK/i } @names));
 
-	my $sth = $dbh->column_info(undef, undef, $tab);
+	my $sth = $dbh->column_info(undef, undef, $tab, undef);
 
     if (ref $sth) {
 		
 		# Only attempt the primary_key lookup if using the column_info call.
 
-		my @key_column_names = $dbh->primary_key( undef, undef, $tab );
 		my %pk_cols;
-		# Convert the column names to lower case for matching
-		foreach my $idx (0 ..$#key_column_names) {
-			$pk_cols{lc($key_column_names[$idx])} = $idx;
-		}
+		eval {
+			my @key_column_names = $dbh->primary_key( undef, undef, $tab );
+			# Convert the column names to lower case for matching
+			foreach my $idx (0 ..$#key_column_names) {
+				$pk_cols{lc($key_column_names[$idx])} = $idx;
+			}
+		};
 
 		my @t_data = ();  # An array of arrays
 			
@@ -1678,42 +1680,42 @@ Many commands - few documented, yet!
 
 =item help
 
-  help
+  /help
 
 =item chistory
 
-  chistory          (display history of all commands entered)
-  chistory | YourPager (display history with paging)
+  /chistory          (display history of all commands entered)
+  /chistory | YourPager (display history with paging)
 
 =item clear
 
-  clear             (Clears the current command buffer)
+  /clear             (Clears the current command buffer)
 
 =item commit
 
-  commit            (commit changes to the database)
+  /commit            (commit changes to the database)
 
 =item connect
 
-  connect           (pick from available drivers and sources)
-  connect dbi:Oracle (pick source from based on driver)
-  connect dbi:YourDriver:YourSource i.e. dbi:Oracle:mysid
+  /connect           (pick from available drivers and sources)
+  /connect dbi:Oracle (pick source from based on driver)
+  /connect dbi:YourDriver:YourSource i.e. dbi:Oracle:mysid
 
 Use this option to change userid or password.
 
 =item count
 
-	count table1 [...]
+	/count table1 [...]
 
 Run a select count(*) from table on each table listed with this command.
 
 =item current
 
-  current            (Display current statement in the buffer)
+  /current            (Display current statement in the buffer)
 
 =item do
 
-  do                 (execute the current (non-select) statement)
+  /do                 (execute the current (non-select) statement)
 
 	dbish> create table foo ( mykey integer )
 	dbish> /do
@@ -1722,11 +1724,11 @@ Run a select count(*) from table on each table listed with this command.
 
 =item drivers
 
-  drivers            (Display available DBI drivers)
+  /drivers            (Display available DBI drivers)
 
 =item edit
 
-  edit               (Edit current statement in an external editor)
+  /edit               (Edit current statement in an external editor)
 
 Editor is defined using the environment variable $VISUAL or
 $EDITOR or default is vi.  Use option editor=new editor to change
@@ -1737,21 +1739,21 @@ and read the file into the editor buffer.
 
 =item exit
 
-  exit              (Exits the shell)
+  /exit              (Exits the shell)
 
 =item get
 
-	get			Retrieve a previous command to the current buffer.
+	/get			Retrieve a previous command to the current buffer.
 
-	get 1			Retrieve the 1 command executed into the current 
+	/get 1			Retrieve the 1 command executed into the current 
 					buffer.
 
-	get -1         Retrieve the second to last command executed into
+	/get -1         Retrieve the second to last command executed into
 					the current buffer.
 
 =item go
 
-  go                (Execute the current statement)
+  /go                (Execute the current statement)
 
 Run (execute) the statement in the current buffer.  This is the default
 action if the statement ends with /
@@ -1766,47 +1768,47 @@ action if the statement ends with /
 
 =item history
 
-  history            (Display combined command and result history)
-  history | more
+  /history            (Display combined command and result history)
+  /history | more
 
 =item load
 
-  load file name    (read contains of file into the current buffer)
+  /load file name    (read contains of file into the current buffer)
 
 The contains of the file is loaded as the current buffer.
 
 =item option
 
-  option [option1[=value]] [option2 ...]
-  option            (Displays the current options)
-  option   MyOption (Displays the value, if exists, of MyOption)
-  option   MyOption=4 (defines and/or sets value for MyOption)
+  /option [option1[=value]] [option2 ...]
+  /option            (Displays the current options)
+  /option   MyOption (Displays the value, if exists, of MyOption)
+  /option   MyOption=4 (defines and/or sets value for MyOption)
 
 =item perl
 
-  perl               (Evaluate the current statement as perl code)
+  /perl               (Evaluate the current statement as perl code)
 
 =item quit
 
-  quit               (quit shell.  Same as exit)
+  /quit               (quit shell.  Same as exit)
 
 =item redo
 
-  redo               (Re-execute the previously executed statement)
+  /redo               (Re-execute the previously executed statement)
 
 =item rhistory
 
-  rhistory           (Display result history)
+  /rhistory           (Display result history)
 
 =item rollback
 
-  rollback           (rollback changes to the database)
+  /rollback           (rollback changes to the database)
 
 For this to be useful, turn the autocommit off. option autocommit=0
 
 =item run
 
-  run file name      (load and execute a file.)
+  /run file name      (load and execute a file.)
 
 This commands load the file (may include full path) and executes.  The
 file is loaded (replaces) the current buffer.  Only 1 statement per
@@ -1814,36 +1816,36 @@ file is allowed (at this time).
 
 =item save
 
-  save file name    (write contains of current buffer to file.)
+  /save file name    (write contains of current buffer to file.)
 
 The contains of the current buffer is written to file.  Currently,
 this command will overwrite a file if it exists.
 
 =item spool
 
-  spool file name  (Starts sending all output to file name)
-  spool on         (Starts sending all output to on.lst)
-  spool off        (Stops sending output)
-  spool            (Displays the status of spooling)
+  /spool file name  (Starts sending all output to file name)
+  /spool on         (Starts sending all output to on.lst)
+  /spool off        (Stops sending output)
+  /spool            (Displays the status of spooling)
 
 When spooling, everything seen in the command window is written to a file
 (except some of the prompts).
 
 =item table_info
 
-  table_info         (display all tables that exist in current database)
-  table_info | more  (for paging)
+  /table_info         (display all tables that exist in current database)
+  /table_info | more  (for paging)
 
 =item trace
 
-  trace              (set DBI trace level for current database)
+  /trace              (set DBI trace level for current database)
 
 Adjust the trace level for DBI 0 - 4.  0 off.  4 lots of information.
 Useful for determining what is really happening in DBI.  See DBI.
 
 =item type_info
 
-  type_info          (display data types supported by current server)
+  /type_info          (display data types supported by current server)
 
 =back
 

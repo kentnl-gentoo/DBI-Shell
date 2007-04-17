@@ -55,7 +55,7 @@ $::opt_g &&= '-g';  # convert to actual string
 
 if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{ABSTRACT_FROM} = 'lib/DBI/Shell.pm';
-    $opts{AUTHOR} = 'Thomas A. Lowery (tl-dbish@stlowery.net) and host of others.';
+    $opts{AUTHOR} = 'Thomas A. Lowery (tlowery@cpan.net) and host of others.';
     $opts{CAPI} = 'TRUE' if $Config{archname} =~ /-object\b/i;
 }
 
