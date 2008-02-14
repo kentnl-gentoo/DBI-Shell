@@ -7,6 +7,7 @@ dbish.PL						Frontend for DBI::Shell
 dbish_config
 lib/DBI/Format.pm				Class for formatting rows of data
 lib/DBI/Format/SQLMinus.pm		Support format subclass for SQLMinus plugin
+lib/DBI/Format/CSV.pm			Class for csv formatting rows of data
 lib/DBI/Shell/Completion.pm		Provide Tab Completion
 lib/DBI/Shell/FindSqlFile.pm	Locate a sql file in path
 lib/DBI/Shell.pm				The DBI interactive shell
@@ -15,6 +16,7 @@ lib/DBI/Shell/SQLMinus.pm		SQLMinus, allow formating
 lib/DBI/Shell/Timing.pm			Module for timing queries.
 t/batch.t						Test script for DBI::Shell in batch mode.
 t/core.t						Test script for DBI::Shell for core dump.
+t/csv.t							Test script for DBI::Shell::Format::CSV.
 t/func.t						Test script for DBI::Shell DBI function usage.
 t/shell.t						Test script for DBI::Shell in interactive mode.
 t/spool.t

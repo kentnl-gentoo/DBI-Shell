@@ -41,7 +41,7 @@ use Carp;
 @ISA = qw(Exporter DBI::Shell::Std);
 @EXPORT = qw(shell);
 
-$VERSION = sprintf( "%d.%02d", q$Revision: 11.94 $ =~ /(\d+)\.(\d+)/ );
+$VERSION = sprintf( "%d.%02d", q$Revision: 11.95 $ =~ /(\d+)\.(\d+)/ );
 
 my $warning = <<'EOM';
 
@@ -65,7 +65,12 @@ sub new {
 	# Post-init plugins.
 	#$sh->SUPER::init(@args);
     $sh->load_plugins($myconfig->{'plug-ins'}->{'post-init'});
-return $sh;
+
+	# do_format is already run in DBI::Shell::Base::new, but that is
+	# before the user config is loaded so we need to run it again if 
+	# the user overrides the format.
+    $sh->do_format($sh->{format});
+	return $sh;
 }
 
 sub shell {
@@ -459,6 +464,7 @@ sub new {
 		}
     }
 
+	# This may be obsolete since it is run again in DBI::Shell::new.
     $sh->do_format($sh->{format});
 
     $sh->{data_source}	= shift(@args) || $ENV{DBI_DSN}  || '';
@@ -1376,6 +1382,11 @@ sub do_describe {
 # desc_show_long: 1
 # desc_show_remarks: 1
 
+	my $schema;
+	if ($tab =~ /^([^.]+)\.([^.]+)$/) {
+		$schema = $1;
+	    $tab = $2;
+	}
 	my @names = ();
 
 	# Determine if the short or long display type is used
@@ -1406,7 +1417,7 @@ sub do_describe {
 			and $sh->{desc_show_remarks} == 1
 			and (not grep { m/REMARK/i } @names));
 
-	my $sth = $dbh->column_info(undef, undef, $tab, undef);
+	my $sth = $dbh->column_info(undef, $schema, $tab, '%');
 
     if (ref $sth) {
 		
@@ -1506,6 +1517,7 @@ sub do_describe {
 	# This is the old method, if the driver doesn't support the DBI column_info
 	# meta data.
 	#
+	$tab = "$schema.$tab" if defined $schema;
 	my $sql = qq{select * from $tab where 1 = 0};
 	$sth = $dbh->prepare( $sql );
 	$sth->execute;
@@ -1680,42 +1692,42 @@ Many commands - few documented, yet!
 
 =item help
 
-  /help
+  help
 
 =item chistory
 
-  /chistory          (display history of all commands entered)
-  /chistory | YourPager (display history with paging)
+  chistory          (display history of all commands entered)
+  chistory | YourPager (display history with paging)
 
 =item clear
 
-  /clear             (Clears the current command buffer)
+  clear             (Clears the current command buffer)
 
 =item commit
 
-  /commit            (commit changes to the database)
+  commit            (commit changes to the database)
 
 =item connect
 
-  /connect           (pick from available drivers and sources)
-  /connect dbi:Oracle (pick source from based on driver)
-  /connect dbi:YourDriver:YourSource i.e. dbi:Oracle:mysid
+  connect           (pick from available drivers and sources)
+  connect dbi:Oracle (pick source from based on driver)
+  connect dbi:YourDriver:YourSource i.e. dbi:Oracle:mysid
 
 Use this option to change userid or password.
 
 =item count
 
-	/count table1 [...]
+	count table1 [...]
 
 Run a select count(*) from table on each table listed with this command.
 
 =item current
 
-  /current            (Display current statement in the buffer)
+  current            (Display current statement in the buffer)
 
 =item do
 
-  /do                 (execute the current (non-select) statement)
+  do                 (execute the current (non-select) statement)
 
 	dbish> create table foo ( mykey integer )
 	dbish> /do
@@ -1724,11 +1736,11 @@ Run a select count(*) from table on each table listed with this command.
 
 =item drivers
 
-  /drivers            (Display available DBI drivers)
+  drivers            (Display available DBI drivers)
 
 =item edit
 
-  /edit               (Edit current statement in an external editor)
+  edit               (Edit current statement in an external editor)
 
 Editor is defined using the environment variable $VISUAL or
 $EDITOR or default is vi.  Use option editor=new editor to change
@@ -1739,21 +1751,21 @@ and read the file into the editor buffer.
 
 =item exit
 
-  /exit              (Exits the shell)
+  exit              (Exits the shell)
 
 =item get
 
-	/get			Retrieve a previous command to the current buffer.
+	get			Retrieve a previous command to the current buffer.
 
-	/get 1			Retrieve the 1 command executed into the current 
+	get 1			Retrieve the 1 command executed into the current 
 					buffer.
 
-	/get -1         Retrieve the second to last command executed into
+	get -1         Retrieve the second to last command executed into
 					the current buffer.
 
 =item go
 
-  /go                (Execute the current statement)
+  go                (Execute the current statement)
 
 Run (execute) the statement in the current buffer.  This is the default
 action if the statement ends with /
@@ -1768,47 +1780,47 @@ action if the statement ends with /
 
 =item history
 
-  /history            (Display combined command and result history)
-  /history | more
+  history            (Display combined command and result history)
+  history | more
 
 =item load
 
-  /load file name    (read contains of file into the current buffer)
+  load file name    (read contains of file into the current buffer)
 
 The contains of the file is loaded as the current buffer.
 
 =item option
 
-  /option [option1[=value]] [option2 ...]
-  /option            (Displays the current options)
-  /option   MyOption (Displays the value, if exists, of MyOption)
-  /option   MyOption=4 (defines and/or sets value for MyOption)
+  option [option1[=value]] [option2 ...]
+  option            (Displays the current options)
+  option   MyOption (Displays the value, if exists, of MyOption)
+  option   MyOption=4 (defines and/or sets value for MyOption)
 
 =item perl
 
-  /perl               (Evaluate the current statement as perl code)
+  perl               (Evaluate the current statement as perl code)
 
 =item quit
 
-  /quit               (quit shell.  Same as exit)
+  quit               (quit shell.  Same as exit)
 
 =item redo
 
-  /redo               (Re-execute the previously executed statement)
+  redo               (Re-execute the previously executed statement)
 
 =item rhistory
 
-  /rhistory           (Display result history)
+  rhistory           (Display result history)
 
 =item rollback
 
-  /rollback           (rollback changes to the database)
+  rollback           (rollback changes to the database)
 
 For this to be useful, turn the autocommit off. option autocommit=0
 
 =item run
 
-  /run file name      (load and execute a file.)
+  run file name      (load and execute a file.)
 
 This commands load the file (may include full path) and executes.  The
 file is loaded (replaces) the current buffer.  Only 1 statement per
@@ -1816,38 +1828,92 @@ file is allowed (at this time).
 
 =item save
 
-  /save file name    (write contains of current buffer to file.)
+  save file name    (write contains of current buffer to file.)
 
 The contains of the current buffer is written to file.  Currently,
 this command will overwrite a file if it exists.
 
 =item spool
 
-  /spool file name  (Starts sending all output to file name)
-  /spool on         (Starts sending all output to on.lst)
-  /spool off        (Stops sending output)
-  /spool            (Displays the status of spooling)
+  spool file name  (Starts sending all output to file name)
+  spool on         (Starts sending all output to on.lst)
+  spool off        (Stops sending output)
+  spool            (Displays the status of spooling)
 
 When spooling, everything seen in the command window is written to a file
 (except some of the prompts).
 
 =item table_info
 
-  /table_info         (display all tables that exist in current database)
-  /table_info | more  (for paging)
+  table_info         (display all tables that exist in current database)
+  table_info | more  (for paging)
 
 =item trace
 
-  /trace              (set DBI trace level for current database)
+  trace              (set DBI trace level for current database)
 
 Adjust the trace level for DBI 0 - 4.  0 off.  4 lots of information.
 Useful for determining what is really happening in DBI.  See DBI.
 
 =item type_info
 
-  /type_info          (display data types supported by current server)
+  type_info          (display data types supported by current server)
 
 =back
+
+
+=head1 CONFIGURATION
+
+The configuration file (F<~/.dbish_config> by default, overridden by
+C<$DBISH_CONFIG>) is eval'd as perl code and should return a hash ref
+containing the configuration items. Notable keys include
+
+=over
+
+=item options
+
+The value is another hashref containing the options and their values.
+Type C</option> at the prompt to get a list of acceptable options.
+
+=item plug-ins
+
+Plugins to load. This is a rather complex data structure which is
+recursively walked to determine which plugins should be loaded. At the
+top level, there are the phases
+C<pre-init>, C<post-init>, C<pre-connect>, and C<post-connect>. At lower
+levels plugins can be selected by the name of the database driver, and
+individual options can be set. Finally, at some point an arrayref
+containing the package names of the plugins to load must be found.
+
+=back
+
+Since the config file can contain arbitrary perl code, it can do
+anything which can be done in perl. One rather useful hack is to call
+binmode to set the encoding for standard input and output. 
+
+=head2 Example
+
+    binmode STDIN,  ":utf8";
+    binmode STDOUT, ":utf8";
+
+    {
+        options => {
+            format => 'partbox',
+        },
+        'plug-ins' => {
+            'pre-init' => [
+                'DBI::Shell::Timing',
+                'DBI::Shell::Spool',
+            ],
+        },
+    };
+
+This config file first sets the :utf8 layer for input and output to
+match the terminal (if you don't use UTF-8, you could use :encoding()
+here), and then returns the hashref with the configuration items:
+The format is set 'partbox', and the the two plugins
+'DBI::Shell::Timing' and 'DBI::Shell::Spool' are loaded.
+
 
 =head1 ENVIRONMENT
 

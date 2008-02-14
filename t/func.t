@@ -20,8 +20,8 @@ BEGIN {
 
 my ($pf, $sf);
 
-use Test::More tests => 50;
-# use Test::More skip_all => 'Function tests not completed';
+# use Test::More tests => 50;
+use Test::More skip_all => 'Function tests not completed';
 
 
 BEGIN { use_ok( 'DBI::Shell' ); }
