@@ -133,6 +133,7 @@ use Text::Abbrev ();
 use Term::ReadLine;
 use Getopt::Long 2.17;	# upgrade from CPAN if needed: http://www.perl.com/CPAN
 use IO::File;
+use File::Spec ();
 
 use DBI 1.00 qw(:sql_types :utils);
 use DBI::Format;
@@ -544,7 +545,8 @@ sub configuration {
     $sh->{config_file} = $ENV{DBISH_CONFIG} || "$homedir/.dbish_config";
 	my $config;
     if ($sh->{config_file} && -f $sh->{config_file}) {
-		$config = require $sh->{config_file};
+		my $full = File::Spec->rel2abs( $sh->{config_file} );
+		$config = require $full;
 		# allow for custom configuration options.
 		if (exists $config->{'options'} ) {
 			$sh->install_options( $config->{'options'} );
