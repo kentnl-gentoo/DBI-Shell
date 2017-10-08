@@ -155,6 +155,7 @@ sub header {
 
 				if ( exists $cf->{format} and defined $cf->{format} ) {
 					$format_names = $cf->{format};
+					no warnings 'redundant';
 					$width = length sprintf( $format_names, " " );
 				}
 
