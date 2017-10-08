@@ -62,7 +62,7 @@ sub look_for_file {
 	File::Find::find(
 		{
 			  wanted 	=> \&wanted
-			, no_chrdir 	=> 1
+			, no_chdir 	=> 1
 			, bydepth	=> 0
 		}, 
 		@search_path);
