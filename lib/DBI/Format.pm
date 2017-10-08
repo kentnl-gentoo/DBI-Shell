@@ -374,7 +374,7 @@ sub header {
 
 sub row {
     my($self, $rowref) = @_;
-		local( $^W = 0 );
+		local ($^W) = 0;
     my @row = @$rowref;
 	my $fh = $self->{'fh'};
 	print $fh (join($self->{sep}, @row), "\n");
